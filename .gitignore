@@ -1,0 +1,7 @@
+.vscode/
+.claude/
+target/
+*.lock
+*.png
+*.jpg
+*.txt

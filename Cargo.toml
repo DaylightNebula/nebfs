@@ -1,0 +1,35 @@
+[package]
+name = "neb-fs"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.104"
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls-no-provider", "charset", "http2", "system-proxy"] }
+rustls = { version = "0.23", default-features = false }
+rustls-rustcrypto = "0.0.2-alpha"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tokio = { version = "1.53.1", features = ["fs"] }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+tokio = { version = "1.53.1", features = ["macros", "rt", "rt-multi-thread"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+js-sys = "0.3"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3", features = [
+    "Blob",
+    "console",
+    "File",
+    "FileSystemDirectoryHandle",
+    "FileSystemFileHandle",
+    "FileSystemGetDirectoryOptions",
+    "FileSystemGetFileOptions",
+    "FileSystemWritableFileStream",
+    "Navigator",
+    "StorageManager",
+    "Window",
+    "WritableStream",
+] }

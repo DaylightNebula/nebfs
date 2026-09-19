@@ -1,7 +1,7 @@
 use std::sync::OnceLock;
 
 use anyhow::{Context, anyhow};
-use mutual::{RefGuard, RelaxedMutex, SharedData};
+use mutual::{RelaxedMutex, SharedData};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
@@ -9,13 +9,15 @@ use web_sys::{
     FileSystemGetFileOptions, FileSystemWritableFileStream,
 };
 
-use crate::{BinaryFuture, EmptyFuture, FileSystem, TextFuture};
+use crate::{BinaryFuture, EmptyFuture, FileSystem, FileSystemRef, TextFuture};
 
 static WASM_FILE_SYSTEM: OnceLock<RelaxedMutex<Box<dyn FileSystem>>> = OnceLock::new();
-pub fn wasm_file_system() -> RefGuard<Box<dyn FileSystem>> {
+
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen::prelude::wasm_bindgen)]
+pub fn wasm_file_system() -> FileSystemRef {
     let mutex = WASM_FILE_SYSTEM
         .get_or_init(|| RelaxedMutex::new(Box::new(WasmFileSystem)));
-    return mutex.lock_ref();
+    return FileSystemRef::new(mutex.lock_ref());
 }
 
 /// Browser file system backed by the origin private file system, reading

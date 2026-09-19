@@ -1,15 +1,16 @@
 use std::sync::OnceLock;
 
-use mutual::{RefGuard, RelaxedMutex, SharedData};
+use mutual::{RelaxedMutex, SharedData};
 use tokio::{fs::OpenOptions, io::{AsyncReadExt, AsyncWriteExt}};
 
-use crate::{BinaryFuture, EmptyFuture, FileSystem, ReadStream, ReadStreamFuture, TextFuture, WriteStream, WriteStreamFuture};
+use crate::{BinaryFuture, EmptyFuture, FileSystem, FileSystemRef, ReadStream, ReadStreamFuture, TextFuture, WriteStream, WriteStreamFuture};
 
 static LOCAL_FILE_SYSTEM_ONCE_LOCK: OnceLock<RelaxedMutex<Box<dyn FileSystem>>> = OnceLock::new();
-pub fn local_file_system() -> RefGuard<Box<dyn FileSystem>> {
+
+pub fn local_file_system() -> FileSystemRef {
     let mutex = LOCAL_FILE_SYSTEM_ONCE_LOCK
         .get_or_init(|| RelaxedMutex::new(Box::new(LocalFileSystem)));
-    return mutex.lock_ref();
+    return FileSystemRef::new(mutex.lock_ref());
 }
 
 /// [`FileSystem`] backed by the local disk via `tokio::fs`. Supports full

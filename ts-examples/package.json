@@ -1,0 +1,18 @@
+{
+    "name": "neb-fs-examples",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build:node": "wasm-pack build ../neb-fs --target nodejs --out-dir pkg-node -- --features node",
+        "build:web": "wasm-pack build ../neb-fs --target web --out-dir pkg-web && tsc",
+        "test": "npm run test:node && npm run test:browser",
+        "test:node": "npm run build:node && node --experimental-strip-types --test node.test.ts",
+        "test:browser": "npm run build:web && node --experimental-strip-types browser-runner.ts",
+        "start": "npm run build:web && python3 -m http.server --directory .. 8000"
+    },
+    "devDependencies": {
+        "@types/node": "^22.0.0",
+        "playwright-core": "^1.63.0",
+        "typescript": "^5.7.0"
+    }
+}

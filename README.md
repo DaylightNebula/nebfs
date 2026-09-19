@@ -13,6 +13,7 @@ This is a multi-crate repo:
 - [`neb-fs/`](neb-fs) — the core Rust library described below.
 - [`neb-fs-js/`](neb-fs-js) — JS bindings, in progress (crate scaffolded, no bindings yet).
 - `neb-fs-jvm` — JVM bindings, planned, not started yet.
+- [`jsts-examples/`](jsts-examples) — runnable TypeScript examples for the Node and browser backends.
 
 ## Backends
 
@@ -105,6 +106,32 @@ See [`neb-fs/examples/wasm_read_write.rs`](neb-fs/examples/wasm_read_write.rs).
 More examples live in [`neb-fs/examples/`](neb-fs/examples): reading
 (`local_read`, `local_read_stream`), writing (`local_write`,
 `local_write_stream`), and fetching over HTTP (`web_read`).
+
+### JavaScript / TypeScript
+
+`wasm-pack` exports `FileSystemRef` and `VirtualFile` to JS, with `readBytes`,
+`readText`, `writeBytes` and `writeText` returning promises. Streaming is not
+exposed.
+
+The Node backend imports `node:fs/promises`, which a browser cannot resolve, so
+it sits behind the `node` feature and each target gets its own package:
+
+```bash
+wasm-pack build neb-fs --target nodejs --out-dir pkg-node -- --features node
+wasm-pack build neb-fs --target web    --out-dir pkg-web
+```
+
+```ts
+import { node_file_system, VirtualFile } from "./neb-fs/pkg-node/neb_fs.js";
+
+const file = new VirtualFile(node_file_system(), "notes/todo.txt");
+await file.writeText("write me");
+console.log(await file.readText());
+```
+
+Note that `new VirtualFile(fs, path)` takes ownership of the handle it is
+given, so open a fresh one per use. Working examples for both backends, with
+checks that run under `npm test`, are in [`jsts-examples/`](jsts-examples).
 
 ## Implementing a custom backend
 

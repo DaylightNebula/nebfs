@@ -6,6 +6,11 @@ edition = "2024"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+# Node backend: pulls in a static `node:fs/promises` import, so it must stay
+# off for browser builds.
+node = []
+
 [dependencies]
 anyhow = "1.0.104"
 mutual = "1.0.2"

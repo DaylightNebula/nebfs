@@ -1,8 +1,8 @@
 use std::sync::OnceLock;
 
-use mutual::{RefGuard, RelaxedMutex, SharedData};
+use mutual::{RelaxedMutex, SharedData};
 
-use crate::{BinaryFuture, FileSystem};
+use crate::{BinaryFuture, FileSystem, FileSystemRef};
 
 /// rustls is built without a provider so no C/assembly crypto is linked in;
 /// install the pure-Rust one before the first TLS handshake.
@@ -15,10 +15,10 @@ fn install_crypto_provider() {
 
 static WEB_FILE_SYSTEM: OnceLock<RelaxedMutex<Box<dyn FileSystem>>> = OnceLock::new();
 
-pub fn web_file_system() -> RefGuard<Box<dyn FileSystem>> {
+pub fn web_file_system() -> FileSystemRef {
     let mutex = WEB_FILE_SYSTEM
         .get_or_init(|| RelaxedMutex::new(Box::new(WebFileSystem)));
-    return mutex.lock_ref();
+    return FileSystemRef::new(mutex.lock_ref());
 }
 
 /// [`FileSystem`] that reads files via plain HTTP GET (through `reqwest`).

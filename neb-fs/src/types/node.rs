@@ -1,10 +1,19 @@
+use std::sync::OnceLock;
+
 use anyhow::{Context, anyhow};
+use mutual::{RelaxedMutex, SharedData};
 use wasm_bindgen::prelude::*;
 
-use crate::{BinaryFuture, EmptyFuture, FileSystem, TextFuture};
+use crate::{BinaryFuture, EmptyFuture, FileSystem, FileSystemRef, TextFuture};
 
-/// Shared instance of [`NodeFileSystem`].
-pub const NODE_FILE_SYSTEM: &'static NodeFileSystem = &NodeFileSystem;
+static NODE_FILE_SYSTEM: OnceLock<RelaxedMutex<Box<dyn FileSystem>>> = OnceLock::new();
+
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen::prelude::wasm_bindgen)]
+pub fn node_file_system() -> FileSystemRef {
+    let mutex = NODE_FILE_SYSTEM
+        .get_or_init(|| RelaxedMutex::new(Box::new(NodeFileSystem)));
+    return FileSystemRef::new(mutex.lock_ref());
+}
 
 /// [`FileSystem`] backed by Node's `node:fs/promises`, for wasm builds
 /// running under Node rather than a browser. Read and write are supported;

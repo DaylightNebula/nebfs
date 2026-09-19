@@ -1,25 +1,29 @@
 use std::pin::Pin;
 
 #[cfg(not(target_arch = "wasm32"))] pub mod local;
+#[cfg(not(target_arch = "wasm32"))] pub mod web;
 #[cfg(target_arch = "wasm32")] pub mod wasm;
 #[cfg(target_arch = "wasm32")] pub mod node;
-pub mod web;
 
 use anyhow::bail;
 #[cfg(not(target_arch = "wasm32"))] pub use local::*;
+#[cfg(not(target_arch = "wasm32"))] pub use web::*;
 #[cfg(target_arch = "wasm32")] pub use wasm::*;
 #[cfg(target_arch = "wasm32")] pub use node::*;
-pub use web::*;
 
-/// Future returned by operations that produce no value on success.
+/// Pinned future returned by operations that produce no value on success.
 pub type EmptyFuture<'a> = Pin<Box<dyn Future<Output = anyhow::Result<()>> + 'a>>;
-/// Future returned by operations that read raw bytes.
+
+/// Pinned future returned by operations that read raw bytes.
 pub type BinaryFuture<'a> = Pin<Box<dyn Future<Output = anyhow::Result<Vec<u8>>> + 'a>>;
-/// Future returned by operations that read UTF-8 text.
+
+/// Pinned future returned by operations that read UTF-8 text.
 pub type TextFuture<'a> = Pin<Box<dyn Future<Output = anyhow::Result<String>> + 'a>>;
-/// Future returned by operations that open a [`WriteStream`].
+
+/// Pinned future returned by operations that open a [`WriteStream`].
 pub type WriteStreamFuture<'a> = Pin<Box<dyn Future<Output = anyhow::Result<Box<dyn WriteStream>>> + 'a>>;
-/// Future returned by operations that open a [`ReadStream`].
+
+/// Pinned future returned by operations that open a [`ReadStream`].
 pub type ReadStreamFuture<'a> = Pin<Box<dyn Future<Output = anyhow::Result<Box<dyn ReadStream>>> + 'a>>;
 
 /// A backend for reading and, optionally, writing files by path. Only the

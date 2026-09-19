@@ -2,12 +2,12 @@ use crate::{BinaryFuture, EmptyFuture, FileSystem, ReadStreamFuture, TextFuture,
 
 /// A path bound to a [`FileSystem`], so reads, writes, and streams can be
 /// called without repeating the backend and path at each call site.
-pub struct File<'a> {
+pub struct VirtualFile<'a> {
     file_system: &'a dyn FileSystem,
     path: &'a str
 }
 
-impl <'a> File<'a> {
+impl <'a> VirtualFile<'a> {
     /// Binds `path` to `file_system` for subsequent operations.
     pub fn open(file_system: &'a dyn FileSystem, path: impl Into<&'a str>) -> Self {
         Self { file_system, path: path.into() }

@@ -2,9 +2,17 @@
 
 Status: work in progress (0.1.0), API may still change.
 
-A small async file system abstraction with pluggable backends: local disk,
-the browser origin private file system, Node.js, and plain HTTP GET. Write
-code against one `FileSystem` trait and swap backends per target.
+A small async file system abstraction with pluggable backends allowing local files, HTTP files, JS files
+and others to be treated the same.  Currently this project provides a local backend and a web backend
+for native targets, a backend for handling files on node, and a backend for interacting with JS files. 
+
+## Project layout
+
+This is a multi-crate repo:
+
+- [`neb-fs/`](neb-fs) — the core Rust library described below.
+- [`neb-fs-js/`](neb-fs-js) — JS bindings, in progress (crate scaffolded, no bindings yet).
+- `neb-fs-jvm` — JVM bindings, planned, not started yet.
 
 ## Backends
 
@@ -89,17 +97,17 @@ system. Build the example for `wasm32-unknown-unknown` and load it from a
 page:
 
 ```bash
-cargo build --example wasm_read_write --target wasm32-unknown-unknown
+cargo build --manifest-path neb-fs/Cargo.toml --example wasm_read_write --target wasm32-unknown-unknown
 ```
 
-See [`examples/wasm_read_write.rs`](examples/wasm_read_write.rs).
+See [`neb-fs/examples/wasm_read_write.rs`](neb-fs/examples/wasm_read_write.rs).
 
-More examples live in [`examples/`](examples): reading (`local_read`,
-`local_read_stream`), writing (`local_write`, `local_write_stream`), and
-fetching over HTTP (`web_read`).
+More examples live in [`neb-fs/examples/`](neb-fs/examples): reading
+(`local_read`, `local_read_stream`), writing (`local_write`,
+`local_write_stream`), and fetching over HTTP (`web_read`).
 
 ## Implementing a custom backend
 
-Implement the `FileSystem` trait (see [`src/types.rs`](src/types.rs)) — only
-`read_bytes` and `read_text` are required, write and streaming methods are
-optional.
+Implement the `FileSystem` trait (see [`neb-fs/src/types.rs`](neb-fs/src/types.rs))
+— only `read_bytes` and `read_text` are required, write and streaming
+methods are optional.

@@ -1,5 +1,3 @@
-use anyhow::bail;
-
 use crate::{BinaryFuture, FileSystem};
 
 /// rustls is built without a provider so no C/assembly crypto is linked in;
@@ -30,18 +28,6 @@ impl FileSystem for WebFileSystem {
             let response = reqwest::get(path).await?;
             let text = response.text().await?;
             Ok(text)
-        })
-    }
-
-    fn write_bytes<'a>(&self, _path: &'a str, _bytes: Vec<u8>) -> super::EmptyFuture<'a> {
-        Box::pin(async move {
-            bail!("File system has no write capability")
-        })
-    }
-
-    fn write_text<'a>(&self, _path: &'a str, _text: String) -> super::EmptyFuture<'a> {
-        Box::pin(async move {
-            bail!("File system has no write capability")
         })
     }
 }

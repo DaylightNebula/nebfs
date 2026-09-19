@@ -1,4 +1,4 @@
-use crate::{BinaryFuture, EmptyFuture, FileSystem, TextFuture};
+use crate::{BinaryFuture, EmptyFuture, FileSystem, ReadStreamFuture, TextFuture, WriteStreamFuture};
 
 pub struct File<'a> {
     file_system: &'a dyn FileSystem,
@@ -24,5 +24,13 @@ impl <'a> File<'a> {
 
     pub fn write_text(&self, text: impl Into<String>) -> EmptyFuture<'a> {
         self.file_system.write_text(self.path, text.into())
+    }
+
+    pub fn as_read_stream(&self) -> ReadStreamFuture<'a> {
+        self.file_system.as_read_stream(self.path)
+    }
+
+    pub fn as_write_stream(&self) -> WriteStreamFuture<'a> {
+        self.file_system.as_write_stream(self.path)
     }
 }

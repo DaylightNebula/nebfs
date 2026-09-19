@@ -5,14 +5,13 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.104"
+
+[target.'cfg(not(target_os = "jvm"))'.dependencies]
 reqwest = { version = "0.13.5", default-features = false, features = ["rustls-no-provider", "charset", "http2", "system-proxy"] }
 rustls = { version = "0.23", default-features = false }
 rustls-rustcrypto = "0.0.2-alpha"
 
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-tokio = { version = "1.53.1", features = ["fs"] }
-
-[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+[target.'cfg(not(any(target_arch = "wasm32", target_os = "jvm")))'.dev-dependencies]
 tokio = { version = "1.53.1", features = ["macros", "rt", "rt-multi-thread"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -33,3 +32,6 @@ web-sys = { version = "0.3", features = [
     "Window",
     "WritableStream",
 ] }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("jvm"))'] }

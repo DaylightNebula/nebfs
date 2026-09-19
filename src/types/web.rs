@@ -9,8 +9,11 @@ fn install_crypto_provider() {
     });
 }
 
+/// Shared instance of [`WebFileSystem`].
 pub const WEB_FILE_SYSTEM: &'static WebFileSystem = &WebFileSystem;
 
+/// [`FileSystem`] that reads files via plain HTTP GET (through `reqwest`).
+/// Read-only: writes fall back to the trait's default "unsupported" error.
 pub struct WebFileSystem;
 impl FileSystem for WebFileSystem {
     fn read_bytes<'a>(&self, path: &'a str) -> BinaryFuture<'a> {

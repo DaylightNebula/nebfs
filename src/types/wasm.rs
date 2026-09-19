@@ -8,6 +8,7 @@ use web_sys::{
 
 use crate::{BinaryFuture, EmptyFuture, FileSystem, TextFuture};
 
+/// Shared instance of [`WasmFileSystem`].
 pub const WASM_FILE_SYSTEM: &'static WasmFileSystem = &WasmFileSystem;
 
 /// Browser file system backed by the origin private file system, reading

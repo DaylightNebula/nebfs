@@ -3,8 +3,12 @@ use wasm_bindgen::prelude::*;
 
 use crate::{BinaryFuture, EmptyFuture, FileSystem, TextFuture};
 
+/// Shared instance of [`NodeFileSystem`].
 pub const NODE_FILE_SYSTEM: &'static NodeFileSystem = &NodeFileSystem;
 
+/// [`FileSystem`] backed by Node's `node:fs/promises`, for wasm builds
+/// running under Node rather than a browser. Read and write are supported;
+/// writes create missing parent directories. Streaming is not supported.
 pub struct NodeFileSystem;
 
 #[wasm_bindgen(module = "node:fs/promises")]

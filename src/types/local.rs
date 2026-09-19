@@ -2,8 +2,11 @@ use tokio::{fs::OpenOptions, io::{AsyncReadExt, AsyncWriteExt}};
 
 use crate::{BinaryFuture, EmptyFuture, FileSystem, ReadStream, ReadStreamFuture, TextFuture, WriteStream, WriteStreamFuture};
 
+/// Shared instance of [`LocalFileSystem`].
 pub static LOCAL_FILE_SYSTEM: &'static LocalFileSystem = &LocalFileSystem;
 
+/// [`FileSystem`] backed by the local disk via `tokio::fs`. Supports full
+/// read/write and streaming.
 pub struct LocalFileSystem;
 impl FileSystem for LocalFileSystem {
     fn read_bytes<'a>(&self, path: &'a str) -> BinaryFuture<'a> {
@@ -47,9 +50,11 @@ impl FileSystem for LocalFileSystem {
     }
 }
 
+/// A [`LocalFileSystem`] file opened for chunked reads.
 pub struct LocalFileSystemReadStream(tokio::fs::File);
 
 impl LocalFileSystemReadStream {
+    /// Opens `path` for reading.
     pub async fn new(path: &str) -> anyhow::Result<Self> {
         let file = OpenOptions::new()
             .read(true)
@@ -70,9 +75,11 @@ impl ReadStream for LocalFileSystemReadStream {
     }
 }
 
+/// A [`LocalFileSystem`] file opened for chunked appends, created if missing.
 pub struct LocalFileSystemWriteStream(tokio::fs::File);
 
 impl LocalFileSystemWriteStream {
+    /// Opens `path` for appending, creating it if it doesn't exist.
     pub async fn new(path: &str) -> anyhow::Result<Self> {
         let file = OpenOptions::new()
             .create(true)

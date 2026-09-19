@@ -10,12 +10,14 @@ fn main() {
 
 #[cfg(target_arch = "wasm32")]
 fn main() {
-    use neb_fs::{VirtualFile, WASM_FILE_SYSTEM};
+    use neb_fs::{VirtualFile};
 
     const PATH: &'static str = "examples/hello.txt";
 
     wasm_bindgen_futures::spawn_local(async {
-        let file = VirtualFile::open(WASM_FILE_SYSTEM, PATH);
+        use neb_fs::wasm_file_system;
+
+        let file = VirtualFile::open(wasm_file_system(), PATH);
         file.write_text("hello from nebfs").await.unwrap();
 
         let text = file.read_text().await.unwrap();

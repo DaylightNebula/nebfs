@@ -27,33 +27,33 @@ extern "C" {
 }
 
 impl FileSystem for NodeFileSystem {
-    fn read_bytes<'a>(&self, path: &'a str) -> BinaryFuture<'a> {
+    fn read_bytes(&self, path: String) -> BinaryFuture {
         Box::pin(async move {
-            let buffer = read_file(path).await.map_err(js_err)?;
+            let buffer = read_file(&path).await.map_err(js_err)?;
             Ok(js_sys::Uint8Array::new(&buffer).to_vec())
         })
     }
 
-    fn read_text<'a>(&self, path: &'a str) -> TextFuture<'a> {
+    fn read_text(&self, path: String) -> TextFuture {
         Box::pin(async move {
-            let text = read_file_with_encoding(path, "utf8").await.map_err(js_err)?;
+            let text = read_file_with_encoding(&path, "utf8").await.map_err(js_err)?;
             text.as_string().context("file text was not a string")
         })
     }
 
-    fn write_bytes<'a>(&self, path: &'a str, bytes: Vec<u8>) -> EmptyFuture<'a> {
+    fn write_bytes(&self, path: String, bytes: Vec<u8>) -> EmptyFuture {
         Box::pin(async move {
-            create_parents(path).await?;
+            create_parents(&path).await?;
             let data = js_sys::Uint8Array::from(bytes.as_slice());
-            write_file(path, &data).await.map_err(js_err)?;
+            write_file(&path, &data).await.map_err(js_err)?;
             Ok(())
         })
     }
 
-    fn write_text<'a>(&self, path: &'a str, text: String) -> EmptyFuture<'a> {
+    fn write_text(&self, path: String, text: String) -> EmptyFuture {
         Box::pin(async move {
-            create_parents(path).await?;
-            write_file(path, &JsValue::from_str(&text))
+            create_parents(&path).await?;
+            write_file(&path, &JsValue::from_str(&text))
                 .await
                 .map_err(js_err)?;
             Ok(())

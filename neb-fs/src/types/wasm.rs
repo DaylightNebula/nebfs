@@ -1,4 +1,7 @@
+use std::sync::OnceLock;
+
 use anyhow::{Context, anyhow};
+use mutual::{RefGuard, RelaxedMutex, SharedData};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
@@ -8,8 +11,12 @@ use web_sys::{
 
 use crate::{BinaryFuture, EmptyFuture, FileSystem, TextFuture};
 
-/// Shared instance of [`WasmFileSystem`].
-pub const WASM_FILE_SYSTEM: &'static WasmFileSystem = &WasmFileSystem;
+static WASM_FILE_SYSTEM: OnceLock<RelaxedMutex<Box<dyn FileSystem>>> = OnceLock::new();
+pub fn wasm_file_system() -> RefGuard<Box<dyn FileSystem>> {
+    let mutex = WASM_FILE_SYSTEM
+        .get_or_init(|| RelaxedMutex::new(Box::new(WasmFileSystem)));
+    return mutex.lock_ref();
+}
 
 /// Browser file system backed by the origin private file system, reading
 /// through `web_sys::File` and writing through a writable file stream.
@@ -73,27 +80,27 @@ async fn close(stream: FileSystemWritableFileStream) -> anyhow::Result<()> {
 }
 
 impl FileSystem for WasmFileSystem {
-    fn read_bytes<'a>(&self, path: &'a str) -> BinaryFuture<'a> {
+    fn read_bytes(&self, path: String) -> BinaryFuture {
         Box::pin(async move {
-            let buffer = JsFuture::from(read_file(path).await?.array_buffer())
+            let buffer = JsFuture::from(read_file(&path).await?.array_buffer())
                 .await
                 .map_err(js_err)?;
             Ok(js_sys::Uint8Array::new(&buffer).to_vec())
         })
     }
 
-    fn read_text<'a>(&self, path: &'a str) -> TextFuture<'a> {
+    fn read_text(&self, path: String) -> TextFuture {
         Box::pin(async move {
-            let text = JsFuture::from(read_file(path).await?.text())
+            let text = JsFuture::from(read_file(&path).await?.text())
                 .await
                 .map_err(js_err)?;
             text.as_string().context("file text was not a string")
         })
     }
 
-    fn write_bytes<'a>(&self, path: &'a str, mut bytes: Vec<u8>) -> EmptyFuture<'a> {
+    fn write_bytes(&self, path: String, mut bytes: Vec<u8>) -> EmptyFuture {
         Box::pin(async move {
-            let stream = writer(path).await?;
+            let stream = writer(&path).await?;
             JsFuture::from(
                 stream
                     .write_with_u8_array(&mut bytes)
@@ -105,9 +112,9 @@ impl FileSystem for WasmFileSystem {
         })
     }
 
-    fn write_text<'a>(&self, path: &'a str, text: String) -> EmptyFuture<'a> {
+    fn write_text(&self, path: String, text: String) -> EmptyFuture {
         Box::pin(async move {
-            let stream = writer(path).await?;
+            let stream = writer(&path).await?;
             JsFuture::from(stream.write_with_str(&text).map_err(js_err)?)
                 .await
                 .map_err(js_err)?;

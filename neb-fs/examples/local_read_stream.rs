@@ -1,8 +1,8 @@
-use neb_fs::{VirtualFile, LOCAL_FILE_SYSTEM};
+use neb_fs::{VirtualFile, local_file_system};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let file = VirtualFile::open(LOCAL_FILE_SYSTEM, "examples/local_read_stream.rs");
+    let file = VirtualFile::open(local_file_system(), "examples/local_read_stream.rs");
     let mut stream = file.as_read_stream().await?;
     while let Ok(bytes) = stream.stream_bytes(2).await {
         let str = String::from_utf8(bytes)?;

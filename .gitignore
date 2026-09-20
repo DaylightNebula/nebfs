@@ -7,3 +7,4 @@ target/
 *.txt
 *.class
 /neb-fs-jvm/java/build/
+/neb-fs-jvm/java/.gradle/

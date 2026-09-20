@@ -13,10 +13,7 @@ import java.util.concurrent.ExecutionException;
  * blocks the calling thread.
  *
  * Build and publish the artifact first (from neb-fs-jvm/java/):
- *   ./build.sh
- *   mvn install:install-file -Dfile=build/neb-fs-jvm-0.1.0.jar \
- *     -DgroupId=io.github.daylightnebula -DartifactId=neb-fs-jvm \
- *     -Dversion=0.1.0 -Dpackaging=jar
+ *   ./gradlew publishToMavenLocal
  *
  * Then, from java-examples/, compile and run against the local repo jar
  * (needs a JDK 22+ compiler/runtime — the FFM API is stable from 22 on, no

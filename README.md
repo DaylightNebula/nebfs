@@ -179,23 +179,25 @@ JDK 22 through the latest LTS all load the same jar.) Running still wants
 
 #### Building the jar and publishing to Maven local
 
-[`neb-fs-jvm/java/`](neb-fs-jvm/java) holds the Java sources
-(`io.github.daylightnebula.nebfs`). `build.sh` builds the native library,
-compiles the bindings, and packs both into a single jar with the native
-library under `native/` — self-contained, no `LD_LIBRARY_PATH` or
-`java.library.path` setup needed by consumers, since `VirtualFile` extracts
-and loads it from the jar's own classpath resources on first use:
+[`neb-fs-jvm/java/`](neb-fs-jvm/java) is a small Gradle project (sources
+under `src/`, no `main/java` split) using the `java-library` and
+`maven-publish` plugins. Its `cargoBuildNative` task runs `cargo build
+--release` on the sibling Rust crate and wires the resulting native library
+into the jar's resources under `native/`, so `publishToMavenLocal` alone
+produces a self-contained jar — no `LD_LIBRARY_PATH` or `java.library.path`
+setup needed by consumers, since `VirtualFile` extracts and loads it from
+the jar's own classpath resources on first use:
 
 ```bash
 cd neb-fs-jvm/java
-./build.sh
-mvn install:install-file -Dfile=build/neb-fs-jvm-0.1.0.jar \
-  -DgroupId=io.github.daylightnebula -DartifactId=neb-fs-jvm \
-  -Dversion=0.1.0 -Dpackaging=jar
+./gradlew publishToMavenLocal
 ```
 
-That installs it to `~/.m2/repository`, so any local Maven (or Gradle
-`mavenLocal()`) project can depend on `io.github.daylightnebula:neb-fs-jvm:0.1.0`.
+That installs `io.github.daylightnebula:neb-fs-jvm:0.1.0` to
+`~/.m2/repository` (Gradle's `maven-publish` writes the same repository
+layout Maven does), so any local Gradle or Maven project can depend on it
+the normal way — `mavenLocal()` in a Gradle repositories block, or a plain
+`<dependency>` in a Maven `pom.xml`.
 [`java-examples/Main.java`](java-examples/Main.java) is a working smoke test —
 read/write round trip, `FileSystem` reuse across multiple files, and the
 missing-file error path — built and run against the published jar; see the

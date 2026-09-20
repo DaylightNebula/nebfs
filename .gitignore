@@ -5,3 +5,5 @@ target/
 *.png
 *.jpg
 *.txt
+*.class
+/neb-fs-jvm/java/build/

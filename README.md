@@ -12,8 +12,13 @@ This is a multi-crate repo:
 
 - [`neb-fs/`](neb-fs) — the core Rust library described below.
 - [`neb-fs-js/`](neb-fs-js) — JS bindings, in progress (crate scaffolded, no bindings yet).
-- `neb-fs-jvm` — JVM bindings, planned, not started yet.
-- [`jsts-examples/`](jsts-examples) — runnable TypeScript examples for the Node and browser backends.
+- [`neb-fs-jvm/`](neb-fs-jvm) — a native cdylib exposing the local and web
+  backends over a plain C ABI, for calling from Java (or any JVM language)
+  via Project Panama. No JNI, no bytecode-compilation backend involved.
+  [`neb-fs-jvm/java/`](neb-fs-jvm/java) holds the Java bindings, packaged as
+  a self-contained jar publishable to Maven local.
+- [`ts-examples/`](ts-examples) — runnable TypeScript examples for the Node and browser backends.
+- [`java-examples/`](java-examples) — a runnable Java example for the `neb-fs-jvm` bindings.
 
 ## Backends
 
@@ -23,6 +28,7 @@ This is a multi-crate repo:
 | Browser origin private file system | `WasmFileSystem` / `WASM_FILE_SYSTEM` | wasm32 | yes | yes | no |
 | Node.js `fs/promises` | `NodeFileSystem` / `NODE_FILE_SYSTEM` | wasm32 | yes | yes | no |
 | HTTP GET (reqwest) | `WebFileSystem` / `WEB_FILE_SYSTEM` | any | yes | no | no |
+| JVM, via Project Panama | `neb-fs-jvm` cdylib | any JVM (Java/Kotlin/...) | yes | local only | no |
 
 Backends that don't support write or streaming fall back to the
 `FileSystem` trait's default methods, which return an error.
@@ -132,6 +138,76 @@ console.log(await file.readText());
 Note that `new VirtualFile(fs, path)` takes ownership of the handle it is
 given, so open a fresh one per use. Working examples for both backends, with
 checks that run under `npm test`, are in [`jsts-examples/`](jsts-examples).
+
+### JVM (Java, via Project Panama)
+
+`neb-fs-jvm` builds `neb-fs`'s local and web backends as an ordinary native
+shared library (a `cdylib`), called from Java through the
+`java.lang.foreign` Foreign Function & Memory API — no JNI, no generated
+stubs, no bytecode-compilation backend involved. `FileSystem.LOCAL` /
+`FileSystem.WEB` mirror `local_file_system()` / `web_file_system()` as
+reusable constants, and `VirtualFile.open(fileSystem, path)` mirrors the
+Rust/JS API shape. `open` and `close` are plain synchronous calls (neither
+touches the disk — `open` just pairs a path with a backend, `close` frees
+the native handle, and `close` has to be synchronous anyway to satisfy
+`AutoCloseable`), but `readBytes`/`writeBytes`/`readText`/`writeText` — the
+ones that actually do file I/O — each return a `CompletableFuture`: the
+native call still runs synchronously under the hood (there's no async
+runtime on the other side of the FFI boundary to hand a callback to), but
+it runs on a background thread, so the calling thread never blocks on it:
+
+```java
+try (VirtualFile file = VirtualFile.open(FileSystem.LOCAL, "notes/todo.txt")) {
+    file.writeText("write me")
+        .thenCompose(v -> file.readText())
+        .thenAccept(System.out::println)
+        .join();
+}
+```
+
+Don't `close()` a `VirtualFile` while one of its futures is still pending —
+same caveat as calling any of its methods concurrently from another thread.
+
+Requires a **JDK 22+** compiler and runtime — the FFM API was finalized in
+JDK 22 (JEP 454), so no `--enable-preview` is needed. (It's a preview
+feature on JDK 21, and preview class files only run on the exact JDK build
+that produced them — a jar built with `--release 21 --enable-preview` will
+fail with `UnsupportedClassVersionError` on any other JDK, including newer
+ones, which is why `neb-fs-jvm` targets `--release 22` instead: consumers on
+JDK 22 through the latest LTS all load the same jar.) Running still wants
+`--enable-native-access=ALL-UNNAMED` to silence the native-access warning.
+
+#### Building the jar and publishing to Maven local
+
+[`neb-fs-jvm/java/`](neb-fs-jvm/java) holds the Java sources
+(`io.github.daylightnebula.nebfs`). `build.sh` builds the native library,
+compiles the bindings, and packs both into a single jar with the native
+library under `native/` — self-contained, no `LD_LIBRARY_PATH` or
+`java.library.path` setup needed by consumers, since `VirtualFile` extracts
+and loads it from the jar's own classpath resources on first use:
+
+```bash
+cd neb-fs-jvm/java
+./build.sh
+mvn install:install-file -Dfile=build/neb-fs-jvm-0.1.0.jar \
+  -DgroupId=io.github.daylightnebula -DartifactId=neb-fs-jvm \
+  -Dversion=0.1.0 -Dpackaging=jar
+```
+
+That installs it to `~/.m2/repository`, so any local Maven (or Gradle
+`mavenLocal()`) project can depend on `io.github.daylightnebula:neb-fs-jvm:0.1.0`.
+[`java-examples/Main.java`](java-examples/Main.java) is a working smoke test —
+read/write round trip, `FileSystem` reuse across multiple files, and the
+missing-file error path — built and run against the published jar; see the
+commands in its header comment.
+
+Streaming isn't exposed over this boundary (same as the wasm/node
+backends) — it would need its own opaque handle lifetime story on top of
+what whole-file read/write needs. Nor is cross-platform packaging: the jar
+bundles a single native library built for the host it was built on (see the
+`ponytail:` note in `VirtualFile.loadBundledLibrary`) — publishing for other
+OS/architectures needs per-platform native resources and a lookup by
+`os.name`/`os.arch`.
 
 ## Implementing a custom backend
 

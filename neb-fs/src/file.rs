@@ -43,6 +43,16 @@ impl VirtualFile {
     pub async fn as_write_stream(&self) -> anyhow::Result<Box<dyn WriteStream>> {
         self.file_system.as_write_stream(self.path.clone()).await
     }
+
+    /// Moves the file to `to`, replacing a file already there. The handle keeps its old path.
+    pub async fn rename(&self, to: String) -> anyhow::Result<()> {
+        self.file_system.rename(self.path.clone(), to).await
+    }
+
+    /// Whether the file exists.
+    pub async fn exists(&self) -> anyhow::Result<bool> {
+        self.file_system.exists(self.path.clone()).await
+    }
 }
 
 /// JS-facing methods. Each returns a `Promise`; streaming is not exposed.

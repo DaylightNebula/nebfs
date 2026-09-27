@@ -22,6 +22,12 @@ pub type BinaryFuture = Pin<Box<dyn Future<Output = anyhow::Result<Vec<u8>>>>>;
 /// Pinned future returned by operations that read UTF-8 text.
 pub type TextFuture = Pin<Box<dyn Future<Output = anyhow::Result<String>>>>;
 
+/// Pinned future returned by operations that answer yes or no.
+pub type BoolFuture = Pin<Box<dyn Future<Output = anyhow::Result<bool>>>>;
+
+/// Pinned future returned by operations that list names.
+pub type NamesFuture = Pin<Box<dyn Future<Output = anyhow::Result<Vec<String>>>>>;
+
 /// Pinned future returned by operations that open a [`WriteStream`].
 pub type WriteStreamFuture = Pin<Box<dyn Future<Output = anyhow::Result<Box<dyn WriteStream>>>>>;
 
@@ -54,6 +60,30 @@ pub trait FileSystem: Send + Sync {
     #[allow(unused)]
     fn as_read_stream(&self, path: String) -> ReadStreamFuture { 
         Box::pin(async move { bail!("Read stream not supported") }) 
+    }
+
+    /// Moves the file or directory at `from` to `to`, replacing a file already there.
+    #[allow(unused)]
+    fn rename(&self, from: String, to: String) -> EmptyFuture {
+        Box::pin(async move { bail!("Rename not supported") })
+    }
+
+    /// Makes the directory `path` and any missing parents.
+    #[allow(unused)]
+    fn create_dir_all(&self, path: String) -> EmptyFuture {
+        Box::pin(async move { bail!("Directories not supported") })
+    }
+
+    /// Names of the entries in the directory `path`.
+    #[allow(unused)]
+    fn list_dir(&self, path: String) -> NamesFuture {
+        Box::pin(async move { bail!("Directory listing not supported") })
+    }
+
+    /// Whether a file or directory is at `path`.
+    #[allow(unused)]
+    fn exists(&self, path: String) -> BoolFuture {
+        Box::pin(async move { bail!("Exists not supported") })
     }
 }
 
@@ -103,6 +133,22 @@ impl FileSystem for FileSystemRef {
 
     fn as_read_stream(&self, path: String) -> ReadStreamFuture { 
         self.0.as_read_stream(path)
+    }
+
+    fn rename(&self, from: String, to: String) -> EmptyFuture {
+        self.0.rename(from, to)
+    }
+
+    fn create_dir_all(&self, path: String) -> EmptyFuture {
+        self.0.create_dir_all(path)
+    }
+
+    fn list_dir(&self, path: String) -> NamesFuture {
+        self.0.list_dir(path)
+    }
+
+    fn exists(&self, path: String) -> BoolFuture {
+        self.0.exists(path)
     }
 }
 

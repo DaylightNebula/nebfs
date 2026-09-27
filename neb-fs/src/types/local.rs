@@ -3,7 +3,7 @@ use std::sync::OnceLock;
 use mutual::{RelaxedMutex, SharedData};
 use tokio::{fs::OpenOptions, io::{AsyncReadExt, AsyncWriteExt}};
 
-use crate::{BinaryFuture, EmptyFuture, FileSystem, FileSystemRef, ReadStream, ReadStreamFuture, TextFuture, WriteStream, WriteStreamFuture};
+use crate::{BinaryFuture, BoolFuture, EmptyFuture, NamesFuture, FileSystem, FileSystemRef, ReadStream, ReadStreamFuture, TextFuture, WriteStream, WriteStreamFuture};
 
 static LOCAL_FILE_SYSTEM_ONCE_LOCK: OnceLock<RelaxedMutex<Box<dyn FileSystem>>> = OnceLock::new();
 
@@ -55,6 +55,35 @@ impl FileSystem for LocalFileSystem {
             let ws = LocalFileSystemReadStream::new(&path).await?;
             Ok(Box::new(ws) as Box<dyn ReadStream>)
         })
+    }
+
+    fn rename(&self, from: String, to: String) -> EmptyFuture {
+        Box::pin(async move {
+            tokio::fs::rename(from, to).await?;
+            Ok(())
+        })
+    }
+
+    fn create_dir_all(&self, path: String) -> EmptyFuture {
+        Box::pin(async move {
+            tokio::fs::create_dir_all(path).await?;
+            Ok(())
+        })
+    }
+
+    fn list_dir(&self, path: String) -> NamesFuture {
+        Box::pin(async move {
+            let mut entries = tokio::fs::read_dir(path).await?;
+            let mut names = vec![];
+            while let Some(entry) = entries.next_entry().await? {
+                names.push(entry.file_name().to_string_lossy().into_owned());
+            }
+            Ok(names)
+        })
+    }
+
+    fn exists(&self, path: String) -> BoolFuture {
+        Box::pin(async move { Ok(tokio::fs::try_exists(path).await?) })
     }
 }
 

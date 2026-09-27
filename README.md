@@ -100,7 +100,9 @@ async fn main() -> anyhow::Result<()> {
 ### Browser (wasm)
 
 `WasmFileSystem` reads and writes through the browser's origin private file
-system. Build the example for `wasm32-unknown-unknown` and load it from a
+system. Reading a path that isn't stored there falls back to fetching it
+relative to the page, so files served alongside the app (e.g. copied in by
+trunk) can be read by the same path. Build the example for `wasm32-unknown-unknown` and load it from a
 page:
 
 ```bash

@@ -1,12 +1,12 @@
 use std::sync::OnceLock;
 
-use anyhow::{Context, anyhow};
+use anyhow::{Context, anyhow, bail};
 use mutual::{RelaxedMutex, SharedData};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{
     File, FileSystemDirectoryHandle, FileSystemFileHandle, FileSystemGetDirectoryOptions,
-    FileSystemGetFileOptions, FileSystemWritableFileStream,
+    FileSystemGetFileOptions, FileSystemWritableFileStream, Response,
 };
 
 use crate::{BinaryFuture, EmptyFuture, FileSystem, FileSystemRef, TextFuture};
@@ -22,6 +22,10 @@ pub fn wasm_file_system() -> FileSystemRef {
 
 /// Browser file system backed by the origin private file system, reading
 /// through `web_sys::File` and writing through a writable file stream.
+///
+/// A read of a path missing from the origin private file system falls back to
+/// fetching it relative to the page, so files served next to the page can be
+/// read by the same path until a write stores a copy that takes priority.
 pub struct WasmFileSystem;
 
 fn js_err(value: JsValue) -> anyhow::Error {
@@ -68,6 +72,19 @@ async fn read_file(path: &str) -> anyhow::Result<File> {
         .unchecked_into())
 }
 
+/// GETs `path` relative to the page, failing on a non-2xx status.
+async fn fetch(path: &str) -> anyhow::Result<Response> {
+    let window = web_sys::window().context("no window")?;
+    let response: Response = JsFuture::from(window.fetch_with_str(path))
+        .await
+        .map_err(js_err)?
+        .unchecked_into();
+    if !response.ok() {
+        bail!("HTTP {}", response.status());
+    }
+    Ok(response)
+}
+
 async fn writer(path: &str) -> anyhow::Result<FileSystemWritableFileStream> {
     let handle = file_handle(path, true).await?;
     Ok(JsFuture::from(handle.create_writable())
@@ -84,18 +101,30 @@ async fn close(stream: FileSystemWritableFileStream) -> anyhow::Result<()> {
 impl FileSystem for WasmFileSystem {
     fn read_bytes(&self, path: String) -> BinaryFuture {
         Box::pin(async move {
-            let buffer = JsFuture::from(read_file(&path).await?.array_buffer())
-                .await
-                .map_err(js_err)?;
+            let buffer = match read_file(&path).await {
+                Ok(file) => JsFuture::from(file.array_buffer()).await,
+                Err(err) => {
+                    let response = fetch(&path).await
+                        .with_context(|| format!("{path} is not stored ({err}) or served"))?;
+                    JsFuture::from(response.array_buffer().map_err(js_err)?).await
+                }
+            }
+            .map_err(js_err)?;
             Ok(js_sys::Uint8Array::new(&buffer).to_vec())
         })
     }
 
     fn read_text(&self, path: String) -> TextFuture {
         Box::pin(async move {
-            let text = JsFuture::from(read_file(&path).await?.text())
-                .await
-                .map_err(js_err)?;
+            let text = match read_file(&path).await {
+                Ok(file) => JsFuture::from(file.text()).await,
+                Err(err) => {
+                    let response = fetch(&path).await
+                        .with_context(|| format!("{path} is not stored ({err}) or served"))?;
+                    JsFuture::from(response.text().map_err(js_err)?).await
+                }
+            }
+            .map_err(js_err)?;
             text.as_string().context("file text was not a string")
         })
     }
